@@ -1,5 +1,15 @@
 # Propagação de Fake News – Sequencial, Paralelo (Threads) e Distribuído (Sockets)
 
+Trabalho prático da disciplina de Sistemas Distribuídos.
+
+Repositório: https://github.com/LunnaFM/fake-news-paralelo-distribuido
+
+## Integrantes
+- Ilanna Corado
+- Kaique Tavares Zambrano
+- Luana Monteiro Ferreira
+- Matheus Henrique Furtado
+
 Requisitos: JDK 17+ (testado com 21) e Python 3 (só para o script de benchmark).
 
 ## Compilar
