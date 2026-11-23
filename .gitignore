@@ -1,0 +1,12 @@
+# Arquivos compilados do Java
+*.class
+
+# Python
+__pycache__/
+*.pyc
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
