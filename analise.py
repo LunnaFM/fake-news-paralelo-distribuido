@@ -23,7 +23,8 @@ RESULTADO = ("geracoes_exec", "ignorantes", "espalhadores", "inativos", "checksu
 
 
 def ler(arquivo):
-    with open(arquivo, encoding="utf-8", newline="") as f:
+    # utf-8-sig: aceita o arquivo com ou sem BOM (o Excel e o Bloco de Notas gravam com BOM).
+    with open(arquivo, encoding="utf-8-sig", newline="") as f:
         return list(csv.DictReader(f))
 
 
