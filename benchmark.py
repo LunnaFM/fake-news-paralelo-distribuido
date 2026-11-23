@@ -13,12 +13,15 @@ HEADER = ("rep,versao,linhas,colunas,geracoes,pct,limiar,prob,parada,paralelismo
           "t_total,t_calc,t_sync,geracoes_exec,ignorantes,espalhadores,inativos,checksum")
 TIMEOUT = 900
 PORTA_BASE = 5000
+LIMIAR = 3   # limiar de convencimento usado em todos os experimentos (opção --limiar)
 
 
 def info_sistema():
     if sys.platform.startswith("win"):
-        cmds = [["wmic", "cpu", "get", "name,numberofcores,numberoflogicalprocessors"],
-                ["wmic", "computersystem", "get", "totalphysicalmemory"]]
+        # PowerShell em vez de wmic: o wmic foi removido das versões recentes do Windows 11.
+        ps = ["powershell", "-NoProfile", "-Command"]
+        cmds = [ps + ["Get-CimInstance Win32_Processor | Format-List Name,NumberOfCores,NumberOfLogicalProcessors"],
+                ps + ["Get-CimInstance Win32_ComputerSystem | Format-List TotalPhysicalMemory"]]
     elif sys.platform == "darwin":
         cmds = [["sysctl", "-n", "machdep.cpu.brand_string"],
                 ["sysctl", "-n", "hw.physicalcpu", "hw.logicalcpu", "hw.memsize"]]
@@ -69,7 +72,7 @@ def montar_runs(rapido, nuc):
 
 def args_problema(pr):
     return [f"linhas={pr['linhas']}", f"colunas={pr['linhas']}", f"geracoes={pr['geracoes']}",
-            f"pct={pr['pct']}", "limiar=3", f"prob={pr['prob']}", f"parada={pr['parada']}"]
+            f"pct={pr['pct']}", f"limiar={LIMIAR}", f"prob={pr['prob']}", f"parada={pr['parada']}"]
 
 
 def extrair_csv(texto):
@@ -102,10 +105,14 @@ def rodar(versao, pr, P, porta):
 
 
 def main():
+    global LIMIAR
     ap = argparse.ArgumentParser()
     ap.add_argument("--teste", action="store_true", help="versão minúscula para testar")
     ap.add_argument("--reps", type=int, default=None)
+    ap.add_argument("--limiar", type=int, default=3,
+                    help="limiar de convencimento (padrão 3; com 2 a propagação dura mais gerações)")
     o = ap.parse_args()
+    LIMIAR = o.limiar
     reps = o.reps if o.reps is not None else (2 if o.teste else 6)
     nuc = os.cpu_count() or 4
 

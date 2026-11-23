@@ -36,8 +36,28 @@ public class Simulacao {
             p.prob = Double.parseDouble(arg(a, "prob", "1.0"));      // prob. de convencimento
             p.parada = arg(a, "parada", "0").equals("1");             // parada antecipada
             p.semente = Long.parseLong(arg(a, "semente", "42"));
+
+            // Validação: falha cedo, com mensagem clara, em vez de produzir resultado sem sentido.
+            if (p.linhas < 1 || p.colunas < 1)
+                throw new IllegalArgumentException("linhas e colunas devem ser >= 1");
+            if (p.geracoes < 0)
+                throw new IllegalArgumentException("geracoes deve ser >= 0");
+            if (p.pct < 0.0 || p.pct > 1.0)
+                throw new IllegalArgumentException("pct deve estar entre 0 e 1");
+            if (p.limiar < 0)
+                throw new IllegalArgumentException("limiar deve ser >= 0");
+            if (p.prob < 0.0 || p.prob > 1.0)
+                throw new IllegalArgumentException("prob deve estar entre 0 e 1");
             return p;
         }
+    }
+
+    /** Valida o número de threads/workers: no mínimo 1 e no máximo uma faixa por linha
+     *  (com mais faixas que linhas existiriam faixas vazias, sem borda própria para trocar). */
+    public static void validarParalelismo(String nome, int valor, int linhas) {
+        if (valor < 1 || valor > linhas)
+            throw new IllegalArgumentException(nome + " deve estar entre 1 e o numero de linhas ("
+                    + linhas + "); recebido: " + valor);
     }
 
     public static String arg(String[] a, String chave, String padrao) {
@@ -112,8 +132,11 @@ public class Simulacao {
         return esp;
     }
 
-    /** Número pseudoaleatório em [0,1) determinístico por (semente, geração, i, j) (SplitMix64).
-     *  Não depende da ordem de execução, então sequencial/paralelo/distribuído dão o mesmo resultado. */
+    /** Número pseudoaleatório em [0,1) determinístico por (semente, geração, i, j).
+     *  É um hash sem estado (gerador "baseado em contador"): combina os quatro valores e aplica
+     *  a função de mistura final do SplitMix64. Não é o gerador SplitMix64 completo, pois não
+     *  guarda estado entre chamadas. Como não depende da ordem de execução,
+     *  sequencial/paralelo/distribuído dão o mesmo resultado. */
     public static double aleatorio(long semente, int gen, int i, int j) {
         long z = semente;
         z += (gen + 1L) * 0x9E3779B97F4A7C15L;

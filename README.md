@@ -70,11 +70,15 @@ Todos são opcionais, no formato `chave=valor`.
 | `workers` | 2 | número de workers esperados (só no mestre) |
 | `porta` | 5000 | porta TCP (mestre e workers) |
 | `host` | localhost | endereço do mestre (só no worker) |
+| `timeout` | 120 | segundos sem resposta de um worker até o mestre desistir (só no mestre) |
 | `curva` | 0 | `1` imprime os espalhadores por geração (só na versão sequencial) |
 
 O código original em Python sempre para quando não há mais espalhadores. Aqui o padrão é
 `parada=0` para que todas as gerações sejam executadas e a carga de trabalho seja fixa
 nas medições de desempenho; use `parada=1` para reproduzir o comportamento original.
+
+Valores inválidos (grade vazia, `pct` ou `prob` fora de 0 a 1, mais threads/workers do
+que linhas) são recusados com uma mensagem de erro.
 
 ## Executar
 Sequencial e paralela:
@@ -102,6 +106,10 @@ sincronização/comunicação), a contagem final de cada estado e um checksum da
 final. A última linha, iniciada por `CSV,`, repete os mesmos dados em formato tabular e
 é a que o script de benchmark lê.
 
+O mestre da versão distribuída imprime ainda uma linha `Comunicacao:` com os bytes
+trafegados: os da distribuição inicial da grade e os enviados e recebidos durante as
+gerações.
+
 ## Benchmark
     python benchmark.py --teste     # verificação rápida (grades pequenas, 2 repetições)
     python benchmark.py             # experimento completo (6 repetições por configuração)
@@ -112,6 +120,16 @@ probabilidade, e grava `resultados.csv` e `info_sistema.txt`. Cada execução us
 nova. Ao final ele confere se, para cada problema, as três versões produziram as mesmas
 gerações executadas, as mesmas contagens e o mesmo checksum.
 
+O limiar dos experimentos é 3 por padrão; com ele a propagação se extingue em poucas
+gerações. Para um cenário com propagação mais longa:
+
+    python benchmark.py --limiar 2
+
+Para refazer a validação e calcular mediana, speedup e eficiência a partir de um
+`resultados.csv` já existente (descarta a repetição 0 e grava `tabela_resultados.csv`):
+
+    python analise.py
+
 ## Melhorias em relação ao código original
 - probabilidade de convencimento (`prob`) com sorteio determinístico por célula
   (hash de semente, geração, linha e coluna), independente da ordem de execução;
@@ -119,13 +137,20 @@ gerações executadas, as mesmas contagens e o mesmo checksum.
 - comunicação reduzida na versão distribuída: só as bordas trafegam a cada geração e só
   as estatísticas no final;
 - parada antecipada coordenada na barreira (paralela) e pelo mestre (distribuída);
-- medição separada do tempo de cálculo e do tempo de sincronização/comunicação;
+- medição separada do tempo de cálculo e do tempo de sincronização/comunicação, e
+  contagem dos bytes trafegados na versão distribuída;
 - curva de espalhadores por geração (`curva=1`).
 
 ## Limitações
 - os experimentos da versão distribuída foram feitos em uma única máquina (*loopback*);
 - as bordas passam pelo mestre (topologia em estrela), não diretamente entre workers;
-- não há tratamento de falha de worker: se um cair, a simulação é interrompida.
+- não há recuperação de falha: se um worker cair ou ficar sem responder por `timeout`
+  segundos, o mestre encerra a simulação com uma mensagem de erro e fecha as conexões;
+- o tempo total da versão distribuída inclui o envio inicial da grade e o cálculo das
+  estatísticas finais nos workers; o das versões sequencial e paralela não inclui a
+  criação da grade nem as estatísticas;
+- cada execução do benchmark usa uma JVM nova, então os tempos incluem o aquecimento do
+  compilador JIT, o que pesa mais nas grades pequenas.
 
 ## Arquivos
 - `Simulacao.java`: parâmetros, criação da grade, kernel de cálculo, sorteio e estatísticas
@@ -135,4 +160,5 @@ gerações executadas, as mesmas contagens e o mesmo checksum.
 - `FakeNewsMaster.java` e `FakeNewsWorker.java`: versão distribuída com Sockets;
 - `Main.java`: demonstração da versão distribuída em uma só JVM;
 - `benchmark.py`: executa os experimentos e valida os resultados;
+- `analise.py`: revalida um `resultados.csv` e calcula mediana, speedup e eficiência;
 - `apresentacao_revisado.pdf`: slides com resultados, análise e referências bibliográficas.

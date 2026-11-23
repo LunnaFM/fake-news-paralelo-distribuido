@@ -51,7 +51,8 @@ public class FakeNewsWorker {
             out.writeLong(calcNs);
             out.flush();
         } catch (IOException e) {
-            e.printStackTrace();
+            // Mestre inacessível ou conexão encerrada no meio da simulação: o worker termina.
+            System.err.println("Worker encerrado: falha de comunicacao com o mestre (" + e + ")");
         }
     }
 }

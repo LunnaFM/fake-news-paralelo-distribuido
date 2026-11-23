@@ -13,6 +13,7 @@ public class FakeNewsParallel {
     public static void main(String[] args) throws Exception {
         final Simulacao.Params p = Simulacao.Params.ler(args);
         final int T = Integer.parseInt(Simulacao.arg(args, "threads", "4"));
+        Simulacao.validarParalelismo("threads", T, p.linhas);
 
         atual = Simulacao.criarGrade(p.linhas, p.colunas, p.pct, p.semente);
         prox = new byte[p.linhas + 2][p.colunas];
