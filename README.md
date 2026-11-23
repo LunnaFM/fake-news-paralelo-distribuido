@@ -1,6 +1,8 @@
 # Propagação de Fake News – Sequencial, Paralelo (Threads) e Distribuído (Sockets)
 
-Trabalho prático da disciplina de Sistemas Distribuídos.
+Trabalho prático da disciplina de Sistemas Distribuídos: evolução de uma simulação
+sequencial de propagação de fake news (autômato celular 2D) para uma versão paralela
+com Threads e uma versão distribuída com Sockets TCP, todas em Java.
 
 Repositório: https://github.com/LunnaFM/fake-news-paralelo-distribuido
 
@@ -10,32 +12,127 @@ Repositório: https://github.com/LunnaFM/fake-news-paralelo-distribuido
 - Luana Monteiro Ferreira
 - Matheus Henrique Furtado
 
-Requisitos: JDK 17+ (testado com 21) e Python 3 (só para o script de benchmark).
+## Modelo
+A população é uma grade `linhas x colunas`. Cada célula é uma pessoa em um de três estados:
+
+| Estado | Valor | Significado |
+|--------|-------|-------------|
+| Ignorante | 0 | ainda não recebeu/acredita na informação |
+| Espalhador | 1 | acredita e compartilha |
+| Inativo | 2 | já recebeu, mas não compartilha mais |
+
+Regras de uma geração (vizinhança de Moore, até 8 vizinhos):
+- Ignorante vira Espalhador se tiver pelo menos `limiar` vizinhos espalhadores
+  (e, se `prob < 1`, apenas com probabilidade `prob`);
+- Espalhador vira Inativo na geração seguinte;
+- Inativo permanece Inativo.
+
+A geração nova é sempre calculada a partir da grade atual e gravada em outra grade
+(*double buffering*), como no código sequencial original em Python.
+
+## Versões
+- **Sequencial** (`FakeNewsSequencial`): referência para o cálculo de speedup. É o código
+  Python fornecido portado para Java, com as mesmas regras. A grade inicial não é idêntica
+  à do Python porque o gerador aleatório do Java é diferente do gerador do Python.
+- **Paralela** (`FakeNewsParallel`): a grade é dividida em faixas horizontais, uma por
+  thread. Todas leem a grade atual e cada uma escreve apenas nas suas linhas da grade
+  nova, então não há condição de corrida. Uma `CyclicBarrier` sincroniza o fim de cada
+  geração: troca as grades, soma os espalhadores e decide a parada.
+- **Distribuída** (`FakeNewsMaster` + `FakeNewsWorker`): o mestre divide a grade em faixas
+  e envia uma para cada worker por TCP. A cada geração os workers enviam suas linhas de
+  borda ao mestre, que as repassa aos vizinhos como linhas fantasma (*ghost rows*). No
+  final, cada worker devolve só as estatísticas, não a grade.
+
+As três versões usam o mesmo kernel (`Simulacao.passo`) e devem produzir o mesmo
+resultado (mesmas contagens e mesmo checksum) para os mesmos parâmetros.
+
+## Requisitos
+- JDK 17 ou superior (testado com OpenJDK 21);
+- Python 3, apenas para o script de benchmark.
 
 ## Compilar
     javac *.java
 
-## Executar (parâmetros opcionais no formato chave=valor)
-Parâmetros: linhas, colunas, geracoes, pct, limiar, prob, parada, semente
-(padrão: 2000, =linhas, 50, 0.05, 3, 1.0, 0, 42)
+## Parâmetros
+Todos são opcionais, no formato `chave=valor`.
+
+| Parâmetro | Padrão | Descrição |
+|-----------|--------|-----------|
+| `linhas` | 2000 | linhas da grade |
+| `colunas` | igual a `linhas` | colunas da grade |
+| `geracoes` | 50 | número máximo de gerações |
+| `pct` | 0.05 | fração inicial de espalhadores |
+| `limiar` | 3 | vizinhos espalhadores necessários para convencer |
+| `prob` | 1.0 | probabilidade de convencimento quando o limiar é atingido |
+| `parada` | 0 | `1` encerra quando não há mais espalhadores (como no código original) |
+| `semente` | 42 | semente da grade inicial e dos sorteios |
+| `threads` | 4 | número de threads (só na versão paralela) |
+| `workers` | 2 | número de workers esperados (só no mestre) |
+| `porta` | 5000 | porta TCP (mestre e workers) |
+| `host` | localhost | endereço do mestre (só no worker) |
+| `curva` | 0 | `1` imprime os espalhadores por geração (só na versão sequencial) |
+
+O código original em Python sempre para quando não há mais espalhadores. Aqui o padrão é
+`parada=0` para que todas as gerações sejam executadas e a carga de trabalho seja fixa
+nas medições de desempenho; use `parada=1` para reproduzir o comportamento original.
+
+## Executar
+Sequencial e paralela:
 
     java FakeNewsSequencial linhas=2000 geracoes=50 pct=0.05 curva=1
     java FakeNewsParallel threads=4 linhas=2000 geracoes=50
 
-Distribuído (um terminal para cada processo; o mestre primeiro):
+Distribuída (um terminal para cada processo; o mestre primeiro):
 
     java FakeNewsMaster workers=2 porta=5000 linhas=2000 geracoes=50
-    java FakeNewsWorker host=localhost porta=5000     (repetir 2 vezes)
+    java FakeNewsWorker host=localhost porta=5000
+    java FakeNewsWorker host=localhost porta=5000
 
-Demonstração rápida (mestre + 2 workers na mesma JVM, não usar para medir):
+O mestre imprime `PRONTO` quando a porta está aberta e só começa a simulação depois que
+todos os workers se conectam. Para usar mais de uma máquina, rode os workers nas outras
+máquinas com `host=` apontando para o IP do mestre e libere a porta no firewall.
+
+Demonstração rápida (mestre + 2 workers na mesma JVM; não usar para medir desempenho):
 
     java Main linhas=500 geracoes=30
 
-## Benchmark completo
-    python benchmark.py --teste     # verificação rápida
-    python benchmark.py             # gera resultados.csv e info_sistema.txt
+## Saída
+Cada versão imprime as gerações executadas, o tempo total (separado em cálculo e
+sincronização/comunicação), a contagem final de cada estado e um checksum da grade
+final. A última linha, iniciada por `CSV,`, repete os mesmos dados em formato tabular e
+é a que o script de benchmark lê.
+
+## Benchmark
+    python benchmark.py --teste     # verificação rápida (grades pequenas, 2 repetições)
+    python benchmark.py             # experimento completo (6 repetições por configuração)
+
+O script compila o código, executa as três versões variando tamanho da grade, número de
+gerações, percentual inicial, número de threads/workers, parada antecipada e
+probabilidade, e grava `resultados.csv` e `info_sistema.txt`. Cada execução usa uma JVM
+nova. Ao final ele confere se, para cada problema, as três versões produziram as mesmas
+gerações executadas, as mesmas contagens e o mesmo checksum.
+
+## Melhorias em relação ao código original
+- probabilidade de convencimento (`prob`) com sorteio determinístico por célula
+  (hash de semente, geração, linha e coluna), independente da ordem de execução;
+- grade em `byte[][]` e troca de referências entre gerações, sem cópia da grade;
+- comunicação reduzida na versão distribuída: só as bordas trafegam a cada geração e só
+  as estatísticas no final;
+- parada antecipada coordenada na barreira (paralela) e pelo mestre (distribuída);
+- medição separada do tempo de cálculo e do tempo de sincronização/comunicação;
+- curva de espalhadores por geração (`curva=1`).
+
+## Limitações
+- os experimentos da versão distribuída foram feitos em uma única máquina (*loopback*);
+- as bordas passam pelo mestre (topologia em estrela), não diretamente entre workers;
+- não há tratamento de falha de worker: se um cair, a simulação é interrompida.
 
 ## Arquivos
-- Simulacao.java: kernel de cálculo e utilidades compartilhados pelas 3 versões
-- FakeNewsSequencial / FakeNewsParallel / FakeNewsMaster / FakeNewsWorker / Main
-- benchmark.py: executa todos os experimentos e valida checksums
+- `Simulacao.java`: parâmetros, criação da grade, kernel de cálculo, sorteio e estatísticas
+  compartilhados pelas três versões;
+- `FakeNewsSequencial.java`: versão sequencial;
+- `FakeNewsParallel.java`: versão paralela com Threads;
+- `FakeNewsMaster.java` e `FakeNewsWorker.java`: versão distribuída com Sockets;
+- `Main.java`: demonstração da versão distribuída em uma só JVM;
+- `benchmark.py`: executa os experimentos e valida os resultados;
+- `apresentacao_revisado.pdf`: slides com resultados, análise e referências bibliográficas.
