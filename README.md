@@ -142,7 +142,12 @@ Para refazer a validação e calcular mediana, speedup e eficiência a partir de
 - curva de espalhadores por geração (`curva=1`).
 
 ## Limitações
-- os experimentos da versão distribuída foram feitos em uma única máquina (*loopback*);
+- em todas as medições, mestre e workers rodaram na mesma máquina (*loopback*); nenhuma
+  usou rede real entre máquinas diferentes;
+- os tempos dependem da máquina: os da apresentação foram medidos em um Intel Core
+  i5-13450HX (6 núcleos P + 4 E); uma segunda execução completa, em um Intel Core i7-1255U
+  (2 núcleos P + 8 E, pasta `verificacao/`), deu os mesmos resultados lógicos, mas speedup
+  menor, cerca de 2 vezes com 4 threads ou workers, sem ganho adicional com 8 ou 12;
 - as bordas passam pelo mestre (topologia em estrela), não diretamente entre workers;
 - não há recuperação de falha: se um worker cair ou ficar sem responder por `timeout`
   segundos, o mestre encerra a simulação com uma mensagem de erro e fecha as conexões;
