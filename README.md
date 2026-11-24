@@ -168,4 +168,5 @@ Para refazer a validação e calcular mediana, speedup e eficiência a partir de
 - `analise.py`: revalida um `resultados.csv` e calcula mediana, speedup e eficiência;
 - `verificacao/`: execução completa do benchmark usada para conferir a corretude das três
   versões (os tempos dela não são os da apresentação; ver o README da pasta);
-- `apresentacao_revisado.pdf`: slides com resultados, análise e referências bibliográficas.
+- `apresentacao_revisado.pdf` (apenas no repositório): slides com resultados, análise e
+  referências bibliográficas. Na entrega, a apresentação vai em um PDF separado.
