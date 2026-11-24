@@ -161,4 +161,6 @@ Para refazer a validação e calcular mediana, speedup e eficiência a partir de
 - `Main.java`: demonstração da versão distribuída em uma só JVM;
 - `benchmark.py`: executa os experimentos e valida os resultados;
 - `analise.py`: revalida um `resultados.csv` e calcula mediana, speedup e eficiência;
+- `verificacao/`: execução completa do benchmark usada para conferir a corretude das três
+  versões (os tempos dela não são os da apresentação; ver o README da pasta);
 - `apresentacao_revisado.pdf`: slides com resultados, análise e referências bibliográficas.
