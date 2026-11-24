@@ -48,7 +48,7 @@ resultado (mesmas contagens e mesmo checksum) para os mesmos parâmetros.
 
 ## Requisitos
 - JDK 17 ou superior (testado com OpenJDK 21);
-- Python 3, apenas para o script de benchmark.
+- Python 3, apenas para os scripts de benchmark e de análise (`benchmark.py` e `analise.py`).
 
 ## Compilar
     javac *.java
@@ -139,7 +139,10 @@ Para refazer a validação e calcular mediana, speedup e eficiência a partir de
 - parada antecipada coordenada na barreira (paralela) e pelo mestre (distribuída);
 - medição separada do tempo de cálculo e do tempo de sincronização/comunicação, e
   contagem dos bytes trafegados na versão distribuída;
-- curva de espalhadores por geração (`curva=1`).
+- curva de espalhadores por geração (`curva=1`);
+- robustez: parâmetros inválidos são recusados antes de a simulação começar, e a versão
+  distribuída encerra de forma limpa, com mensagem de erro, quando um worker cai ou deixa
+  de responder.
 
 ## Limitações
 - em todas as medições, mestre e workers rodaram na mesma máquina (*loopback*); nenhuma
@@ -168,5 +171,6 @@ Para refazer a validação e calcular mediana, speedup e eficiência a partir de
 - `analise.py`: revalida um `resultados.csv` e calcula mediana, speedup e eficiência;
 - `verificacao/`: execução completa do benchmark usada para conferir a corretude das três
   versões (os tempos dela não são os da apresentação; ver o README da pasta);
-- `apresentacao_revisado.pdf` (apenas no repositório): slides com resultados, análise e
-  referências bibliográficas. Na entrega, a apresentação vai em um PDF separado.
+- `apresentacao_revisado.pdf` (apenas no repositório): versão anterior dos slides, com os
+  resultados e as referências bibliográficas. A apresentação final acompanha a entrega em
+  PDF (`apresentacao.pdf`).
